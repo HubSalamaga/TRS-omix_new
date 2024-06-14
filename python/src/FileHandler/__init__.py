@@ -1,1 +1,1 @@
-from FileHandler import FileHandler
+from .FileHandler import FileHandler

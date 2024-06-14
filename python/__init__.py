@@ -1,2 +1,3 @@
-from src.SequenceProcessor import SequenceProcessor as SequenceProcessor
-from src.FileHandler import FileHandler as FileHandler
+from .src import SequenceProcessor
+from .src import FileHandler
+from .src import pytrsomix

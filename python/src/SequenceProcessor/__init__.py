@@ -1,1 +1,1 @@
-from SequenceProcessor import SequenceProcessor
+from .SequenceProcessor import SequenceProcessor
