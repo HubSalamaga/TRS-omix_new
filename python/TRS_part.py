@@ -10,6 +10,7 @@ import sys
 from src.SequenceProcessor import SequenceProcessor
 from src.FileHandler import FileHandler
 from src.pytrsomix import SeqAnalyzer,TRScalculator
+#comment
 
 import pathlib
 def check_mode(value):
