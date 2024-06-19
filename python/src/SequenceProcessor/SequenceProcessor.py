@@ -4,7 +4,7 @@ import subprocess
 import pandas as pd
 from Bio import Entrez, SeqIO
 from tqdm import tqdm
-from src.FileHandler import FileHandler
+import time
 
 class SequenceProcessor:
     @staticmethod
@@ -63,26 +63,48 @@ class SequenceProcessor:
                 print("Invalid email format. Please enter a valid email address.")
         except Exception as e:
              print(f"An unexpected error has occurred {e}. Please try again")
+        return Entrez.email
+             
     @staticmethod
-    def fetch_organism_names(ncbi_ids):
+    def fetch_organism_names(ncbi_ids, max_retries = 3, rate_limit = 0.33,email=Entrez.email,timeout =30):
         """
         Fetch organism names from NCBI based on NCBI IDs.
         """
+        Entrez.email = email
         organism_map = {}
         for ncbi_id in ncbi_ids:
-            try:
-                handle = Entrez.efetch(db='nucleotide',id=ncbi_id, rettype ='gb', retmode = 'text')
-                record = handle.read()
-                for line in record.splitlines():
-                    if line.startswith(" ORGANISM"): #Formating quirk
-                            print(f"Fetching organism name for id: {ncbi_id}")
-                            organism = line.split("ORGANISM")[1].strip().replace(" ","_")
-                            organism_map[ncbi_id] = organism
-                            print(f"Retrieved organism name for id: {ncbi_id} successfully.")
-            except Exception as e:
-                 print(f"Error fetching organism name for NCBI ID: {ncbi_id}: {e}!")
-        print("All organism names successfully retrieved!")
-        return organism_map
+            start_time = time.time()
+            retries = 0
+            success = False
+            while retries < max_retries and not success:
+                try:
+                    print(f"Fetching organism name for id: {ncbi_id}")
+                    handle = Entrez.efetch(db='nucleotide',id=ncbi_id,rettype ='gb',retmode = 'text')
+                    record = handle.read()
+                    for line in record.splitlines():
+                        if line.startswith("  ORGANISM"): #Formating quirk
+                                organism = line.split("ORGANISM")[1].strip().replace(" ","_")
+                                organism_map[ncbi_id] = organism
+                                if organism != 'nan':
+                                    print(f"Retrieved organism name for id: {ncbi_id} successfully {organism}.")
+                                    success = True
+                                else:
+                                    raise Exception('Organism names is nan')
+                except Exception as e:
+                    print(f"Error fetching organism name for NCBI ID: {ncbi_id}: {e}! Retrying...")
+                    retries += 1
+                    time.sleep(rate_limit)
+                finally:
+                    if not success and retries >= max_retries:
+                        time.sleep(rate_limit)
+            
+            elapsed_time = time.time() - start_time
+            
+            if elapsed_time > timeout:
+                print(f"Timeout exceeded. Restarting from ncbi_id {ncbi_id}.")
+                SequenceProcessor.fetch_organism_names(ncbi_ids,email=Entrez.email)
+            
+            return organism_map
     @staticmethod
     def rename_sequences(input_file,output_file):
         """
@@ -157,7 +179,7 @@ class SequenceProcessor:
 
         if not os.path.exists(os.path.join(cdhit_path, "cd-hit-est")):
                 raise FileNotFoundError("CD-HIT executable not found in the specified directory.")
-        
+        from ..FileHandler.FileHandler import FileHandler
         FileHandler.ensure_directory_exists(results_directory)
 
         cmd = [
@@ -254,7 +276,7 @@ class SequenceProcessor:
         SequenceProcessor.process_sequences(input_file, output_file, rename_processor)
     
     @staticmethod
-    def fetch_organism_taxids(ncbi_ids):
+    def fetch_organism_taxids(ncbi_ids,rate_limit = 0.33, max_retries = 3, timeout = 30):
         """
         Fetch organism TaxIDs from NCBI based on NCBI IDs, using organism names as a fallback.
         """
@@ -262,27 +284,36 @@ class SequenceProcessor:
         organism_names = SequenceProcessor.fetch_organism_names(ncbi_ids)
 
         for ncbi_id in ncbi_ids:
-            try:
-                handle = Entrez.efetch(db="nucleotide", id=ncbi_id, rettype="gb", retmode="text")
-                record = handle.read()
-                handle.close()
-                taxid = None
-                for line in record.splitlines():
-                    if line.strip().startswith("/db_xref=\"taxon:"):
-                        taxid = line.split(":")[1].replace("\"", "").strip()
-                        break
-                if taxid:
-                    organism_taxid_map[ncbi_id] = taxid
-                    print(f"Retrieved TaxID {taxid} for NCBI ID {ncbi_id} successfully.")
-                else:
-                    print(f"TaxID not found for {ncbi_id}")
-            except Exception as e:
-                print(f"Error fetching TaxID for NCBI ID {ncbi_id}: {e}")
+            retries = 0
+            success = False
+            while retries < max_retries and not success:
+                try:
+                    handle = Entrez.efetch(db="nucleotide", id=ncbi_id, rettype="gb", retmode="text")
+                    record = handle.read()
+                    handle.close()
+                    taxid = None
+                    for line in record.splitlines():
+                        if line.strip().startswith("/db_xref=\"taxon:"):
+                            taxid = line.split(":")[1].replace("\"", "").strip()
+                            break
+                    if taxid != 'NaN':
+                        organism_taxid_map[ncbi_id] = taxid
+                        print(f"Retrieved TaxID {taxid} for NCBI ID {ncbi_id} successfully.")
+                        success = True
+                    else:
+                        print(f"TaxID not found for {ncbi_id}")
+                except Exception as e:
+                    print(f"Error fetching TaxID for NCBI ID {ncbi_id}: {e}. Retrying....")
+                    retries += 1
+                    time.sleep(rate_limit)
+                finally:
+                    if not success and retries >= max_retries:
+                        time.sleep(rate_limit)
 
-        organism_taxid_map_with_names = {
-            organism_names.get(ncbi_id, "Unknown_Organism"): taxid
-            for ncbi_id, taxid in organism_taxid_map.items()
-        }
+            organism_taxid_map_with_names = {
+                organism_names.get(ncbi_id, "Unknown_Organism"): taxid
+                for ncbi_id, taxid in organism_taxid_map.items()
+            }
 
         print("All organism TaxIDs successfully retrieved and mapped to organism names.")
         return organism_taxid_map_with_names

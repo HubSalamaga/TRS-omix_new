@@ -320,47 +320,47 @@ class FileHandler:
             for file in files:
                 if fnmatch.fnmatch(file,file_name):
                     found.append(os.path.join(root,file))
-    # @staticmethod
-    # def find_file_by_name(file_name, auto=False, folder=None): #probably needs rewriting
-    #     """
-    #     Searches for files with a specified name. If neither 'auto' nor 'folder' is specified,
-    #     searches common locations and prompts the user to select a file if multiple are found.
+    @staticmethod
+    def find_file_by_name(file_name, auto=False, folder=None): #probably needs rewriting
+        """
+        Searches for files with a specified name. If neither 'auto' nor 'folder' is specified,
+        searches common locations and prompts the user to select a file if multiple are found.
         
-    #     Args:
-    #         file_name (str): The name of the file to search for.
-    #         auto (bool): If True, automatically returns the path of the first file found.
-    #         folder (str): Optional. If provided, limits the search to this specified path.
+        Args:
+            file_name (str): The name of the file to search for.
+            auto (bool): If True, automatically returns the path of the first file found.
+            folder (str): Optional. If provided, limits the search to this specified path.
 
-    #     Returns:
-    #         str or None: Path of the selected or found file, or None if not found or exited.
-    #     """
-    #     if not file_name or not isinstance(file_name,str):
-    #         print("Invalid or empty file name provided")
-    #     if folder:
-    #         #If folder is specified limit the search to directory
-    #         found_files = FileHandler.search_files(folder,file_name)
-    #         return FileHandler.prompt_user_selection(found_files,file_name,auto=auto)
-    #     elif auto:
-    #         #If auto is set to True but no folder is specified, search the common locations for first match
-    #         common_locations = [
-    #             os.path.expanduser('~'),
-    #             os.path.join(os.path.expanduser('~'), 'Documents'),
-    #             os.path.join(os.path.expanduser('~'), 'Desktop')
-    #         ]
-    #         for location in common_locations:
-    #             found_files = SeqProcessor.search_files(location,file_name)
-    #             if found_files:
-    #                 return found_files[0]
-    #             else:
-    #                 print("No files with specified name found in common locations")
-    #     else:
-    #         common_locations = [
-    #         os.path.expanduser('~'),
-    #         os.path.join(os.path.expanduser('~'), 'Documents'),
-    #         os.path.join(os.path.expanduser('~'), 'Desktop')
-    #         ]
-    #         all_found = []
-    #         for location in common_locations:
-    #             all_found.extend(SeqProcessor.search_files(location,file_name))
-    #         return SeqProcessor.prompt_user_selection(all_found,file_name,auto=auto)    
-    #     print(f"Found file: {found_files}")   
+        Returns:
+            str or None: Path of the selected or found file, or None if not found or exited.
+        """
+        if not file_name or not isinstance(file_name,str):
+            print("Invalid or empty file name provided")
+        if folder:
+            #If folder is specified limit the search to directory
+            found_files = FileHandler.search_files(folder,file_name)
+            return found_files
+        elif auto:
+            #If auto is set to True but no folder is specified, search the common locations for first match
+            common_locations = [
+                os.path.expanduser('~'),
+                os.path.join(os.path.expanduser('~'), 'Documents'),
+                os.path.join(os.path.expanduser('~'), 'Desktop')
+            ]
+            for location in common_locations:
+                found_files = FileHandler.search_files(location,file_name)
+                if found_files:
+                    return found_files[0]
+                else:
+                    print("No files with specified name found in common locations")
+        else:
+            common_locations = [
+            os.path.expanduser('~'),
+            os.path.join(os.path.expanduser('~'), 'Documents'),
+            os.path.join(os.path.expanduser('~'), 'Desktop')
+            ]
+            all_found = []
+            for location in common_locations:
+                all_found.extend(SeqProcessor.search_files(location,file_name))
+            return SeqProcessor.prompt_user_selection(all_found,file_name,auto=auto)    
+        print(f"Found file: {found_files}")   
